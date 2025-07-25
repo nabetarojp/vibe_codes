@@ -1,0 +1,866 @@
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>画像Tier表作成ツール</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-bg: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            --card-bg: rgba(26, 26, 46, 0.95);
+            --accent-color: #64b5f6;
+            --secondary-color: #bb86fc;
+            --danger-color: #f48fb1;
+            --success-color: #4caf50;
+            --text-primary: #e1e1e1;
+            --text-secondary: #aaa;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --hover-shadow: 0 5px 15px rgba(100, 181, 246, 0.4);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--primary-bg);
+            min-height: 100vh;
+            padding: 20px;
+            color: var(--text-primary);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        /* Header Styles */
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px 0;
+        }
+
+        .logo {
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: var(--text-primary);
+            line-height: 1;
+            white-space: pre;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, var(--accent-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .version {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: var(--accent-color);
+            opacity: 0.7;
+            letter-spacing: 2px;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 16px;
+            border: 2px solid transparent;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: linear-gradient(45deg, var(--accent-color), var(--secondary-color));
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--hover-shadow);
+        }
+
+        .btn-danger {
+            background: linear-gradient(45deg, var(--danger-color), #e91e63);
+        }
+
+        .btn-success {
+            background: linear-gradient(45deg, var(--success-color), #66bb6a);
+        }
+
+        /* Upload Area */
+        .image-upload-area {
+            background: var(--glass-bg);
+            border: 2px dashed #555;
+            border-radius: 15px;
+            padding: 30px 20px;
+            margin-bottom: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .image-upload-area.drag-over {
+            background: rgba(100, 181, 246, 0.1);
+            border-color: var(--accent-color);
+            transform: scale(1.02);
+            box-shadow: 0 0 20px rgba(100, 181, 246, 0.3);
+        }
+
+        .upload-text {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        /* Tier Container */
+        .tier-container {
+            margin-bottom: 30px;
+            min-height: 400px;
+            border-radius: 15px;
+            padding: 20px;
+        }
+
+        .tier-row {
+            display: flex;
+            align-items: stretch;
+            margin-bottom: 15px;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease;
+            border: 1px solid var(--border-color);
+        }
+
+        .tier-row:hover {
+            transform: translateY(-3px);
+        }
+
+        .tier-label {
+            min-width: 120px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.4rem;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        .tier-items {
+            flex: 1;
+            background: var(--glass-bg);
+            padding: 15px;
+            min-height: 100px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: flex-start;
+            align-content: flex-start;
+            border-left: 1px solid var(--border-color);
+            position: relative;
+        }
+
+        .tier-items.drag-over {
+            background: rgba(100, 181, 246, 0.1);
+            border: 2px dashed var(--accent-color);
+        }
+
+        /* Tier Items */
+        .tier-item {
+            position: relative;
+            cursor: move;
+            user-select: none;
+            transition: all 0.3s ease;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+            background: var(--glass-bg);
+            border: 1px solid var(--border-color);
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        .tier-item img {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            display: block;
+            border-radius: 5px;
+        }
+
+        .tier-item.web-image img {
+            border: 2px solid var(--accent-color);
+        }
+
+        .tier-item:hover {
+            transform: scale(1.05);
+            box-shadow: var(--hover-shadow);
+            z-index: 10;
+        }
+
+        .tier-item.dragging {
+            opacity: 0.7;
+            transform: rotate(5deg) scale(1.1);
+            z-index: 1000;
+        }
+
+        .delete-btn {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: var(--danger-color);
+            border: none;
+            color: white;
+            cursor: pointer;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            opacity: 0;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        .tier-item:hover .delete-btn {
+            opacity: 1;
+        }
+
+        .delete-btn:hover {
+            background: #e91e63;
+            transform: scale(1.1);
+        }
+
+        /* Export Controls */
+        .export-controls {
+            text-align: center;
+            margin-top: 20px;
+            padding: 20px;
+        }
+
+        /* Notifications */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(45deg, var(--success-color), #66bb6a);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+        }
+
+        .notification.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .tier-item.loading {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+                margin: 10px;
+            }
+
+            .logo {
+                font-size: 0.4rem;
+                overflow-x: auto;
+            }
+
+            .tier-row {
+                flex-direction: column;
+            }
+
+            .tier-label {
+                min-width: auto;
+                text-align: center;
+            }
+
+            .tier-item img {
+                width: 60px;
+                height: 60px;
+            }
+
+            .controls {
+                justify-content: center;
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">████████╗██╗██████╗ ███████╗    ███╗   ███╗ █████╗ ██╗  ██╗███████╗██████╗ 
+╚══██╔══╝██║██╔══██╗██╔════╝    ████╗ ████║██╔══██╗██║ ██╔╝██╔════╝██╔══██╗
+   ██║   ██║██████╔╝█████╗      ██╔████╔██║███████║█████╔╝ █████╗  ██████╔╝
+   ██║   ██║██╔══██╗██╔══╝      ██║╚██╔╝██║██╔══██║██╔═██╗ ██╔══╝  ██╔══██╗
+   ██║   ██║██║  ██║███████╗    ██║ ╚═╝ ██║██║  ██║██║  ██╗███████╗██║  ██║
+   ╚═╝   ╚═╝╚═╝  ╚═╝╚══════╝    ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝</div>
+            <div class="version">v3.0</div>
+        </div>
+
+
+
+        <div class="tier-container" id="tierContainer">
+            <!-- Tierがここに表示されます -->
+        </div>
+
+        <input type="file" id="fileInput" multiple accept="image/*" style="display: none;">
+
+    <div id="notification" class="notification"></div>
+
+    <script>
+        // アプリケーションの状態管理
+        class AppState {
+            constructor() {
+                this.tierData = [];
+                this.imageCounter = 0;
+                this.draggedItemId = null;
+            }
+
+            addTier(tier) {
+                const imagesIndex = this.tierData.findIndex(t => t.name === 'Images');
+                if (imagesIndex !== -1) {
+                    this.tierData.splice(imagesIndex, 0, tier);
+                } else {
+                    this.tierData.push(tier);
+                }
+            }
+
+            removeTier(index) {
+                this.tierData.splice(index, 1);
+            }
+
+            addImageToTier(tierIndex, imageItem) {
+                if (this.tierData[tierIndex]) {
+                    this.tierData[tierIndex].items.push(imageItem);
+                }
+            }
+
+            removeItemFromAllTiers(itemId) {
+                let removedItem = null;
+                this.tierData.forEach(tier => {
+                    const index = tier.items.findIndex(item => item.id === itemId);
+                    if (index > -1) {
+                        removedItem = tier.items.splice(index, 1)[0];
+                    }
+                });
+                return removedItem;
+            }
+
+            deleteItemFromTier(itemId, tierIndex) {
+                if (this.tierData[tierIndex]) {
+                    this.tierData[tierIndex].items = this.tierData[tierIndex].items.filter(
+                        item => item.id !== itemId
+                    );
+                }
+            }
+
+            clear() {
+                this.tierData = [];
+                this.imageCounter = 0;
+                this.draggedItemId = null;
+            }
+
+            getNextImageId() {
+                return `img_${++this.imageCounter}`;
+            }
+        }
+
+        // Tier管理クラス
+        class TierManager {
+            constructor(appState, renderer) {
+                this.appState = appState;
+                this.renderer = renderer;
+                this.defaultTiers = [
+                    { name: 'S', color: '#e91e63' },
+                    { name: 'A', color: '#9c27b0' },
+                    { name: 'B', color: '#3f51b5' },
+                    { name: 'C', color: '#2196f3' },
+                    { name: 'D', color: '#00bcd4' }
+                ];
+                this.tierColors = [
+                    '#e91e63', '#9c27b0', '#3f51b5', '#2196f3', 
+                    '#00bcd4', '#009688', '#4caf50', '#ff9800', '#ff5722'
+                ];
+            }
+
+            initializeDefaultTiers() {
+                this.defaultTiers.forEach(tier => {
+                    this.appState.addTier({ ...tier, items: [] });
+                });
+            }
+
+            addTier(name = null, color = null) {
+                const tierName = name || prompt('Tier名を入力してください:', `Tier ${this.appState.tierData.length + 1}`);
+                if (!tierName) return;
+                
+                const tierColor = color || this.getRandomTierColor();
+                this.appState.addTier({ name: tierName, color: tierColor, items: [] });
+                this.renderer.render();
+            }
+
+            getRandomTierColor() {
+                return this.tierColors[Math.floor(Math.random() * this.tierColors.length)];
+            }
+
+            clearAll() {
+                if (confirm('すべてのデータを削除しますか？')) {
+                    this.appState.clear();
+                    this.initializeDefaultTiers();
+                    this.renderer.render();
+                }
+            }
+        }
+
+        // 画像管理クラス
+        class ImageManager {
+            constructor(appState, renderer) {
+                this.appState = appState;
+                this.renderer = renderer;
+            }
+
+            addImageToPool(imageSrc, fileName, isWebImage = false, tierIndex = null) {
+                if (tierIndex === null) {
+                    // デフォルトで最初のTierに追加
+                    tierIndex = 0;
+                }
+                
+                const imageItem = {
+                    id: this.appState.getNextImageId(),
+                    src: imageSrc,
+                    name: fileName || `画像${this.appState.imageCounter}`,
+                    isWebImage: isWebImage
+                };
+
+                this.appState.addImageToTier(tierIndex, imageItem);
+                this.renderer.render();
+            }
+
+
+
+            addUrlImage() {
+                const url = prompt('画像のURLを入力してください:');
+                if (url && this.isImageUrl(url)) {
+                    this.addImageToPool(url, 'URL画像', true);
+                } else if (url) {
+                    alert('有効な画像URLを入力してください');
+                }
+            }
+
+            isImageUrl(url) {
+                try {
+                    const urlObj = new URL(url);
+                    const path = urlObj.pathname.toLowerCase();
+                    return path.match(/\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i) || 
+                           url.includes('image') || 
+                           url.includes('img') ||
+                           url.includes('photo');
+                } catch {
+                    return false;
+                }
+            }
+
+            handleFiles(files, tierIndex = null) {
+                Array.from(files).forEach(file => {
+                    if (file.type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            this.addImageToPool(e.target.result, file.name, false, tierIndex);
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            }
+
+            handleWebImageDrop(e, tierIndex = null) {
+                let handled = false;
+                const items = e.dataTransfer.items;
+                
+                if (items) {
+                    for (let item of items) {
+                        if (item.type === 'text/html') {
+                            item.getAsString((html) => {
+                                const parser = new DOMParser();
+                                const doc = parser.parseFromString(html, 'text/html');
+                                const img = doc.querySelector('img');
+                                if (img && img.src) {
+                                    this.addImageToPool(img.src, img.alt || 'ウェブ画像', true, tierIndex);
+                                }
+                            });
+                            handled = true;
+                        } else if (item.type === 'text/uri-list') {
+                            item.getAsString((url) => {
+                                if (this.isImageUrl(url)) {
+                                    this.addImageToPool(url, 'ウェブ画像', true, tierIndex);
+                                }
+                            });
+                            handled = true;
+                        }
+                    }
+                }
+
+                const url = e.dataTransfer.getData('text/plain');
+                if (url && this.isImageUrl(url)) {
+                    this.addImageToPool(url, 'ウェブ画像', true, tierIndex);
+                    handled = true;
+                }
+                
+                return handled;
+            }
+
+            deleteItem(itemId, tierIndex) {
+                this.appState.deleteItemFromTier(itemId, tierIndex);
+                this.renderer.render();
+            }
+        }
+
+        // ドラッグ&ドロップ管理クラス
+        class DragDropManager {
+            constructor(appState, renderer, imageManager) {
+                this.appState = appState;
+                this.renderer = renderer;
+                this.imageManager = imageManager;
+                this.setupEventListeners();
+            }
+
+            setupEventListeners() {
+                document.addEventListener('dragover', (e) => e.preventDefault());
+                document.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    if (!e.target.closest('.tier-items')) {
+                        e.stopPropagation();
+                    }
+                });
+            }
+
+            dragStart(e) {
+                this.appState.draggedItemId = e.currentTarget.dataset.itemId;
+                e.currentTarget.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            }
+
+            dragEnd(e) {
+                e.currentTarget.classList.remove('dragging');
+                setTimeout(() => {
+                    this.appState.draggedItemId = null;
+                }, 100);
+            }
+
+            allowDrop(e) {
+                e.preventDefault();
+                e.currentTarget.classList.add('drag-over');
+            }
+
+            dragLeave(e) {
+                e.currentTarget.classList.remove('drag-over');
+            }
+
+            drop(e) {
+                e.preventDefault();
+                e.currentTarget.classList.remove('drag-over');
+                
+                const tierIndex = parseInt(e.currentTarget.dataset.tier);
+                
+                // 既存アイテムの移動
+                if (this.appState.draggedItemId) {
+                    const item = this.appState.removeItemFromAllTiers(this.appState.draggedItemId);
+                    if (item && tierIndex !== undefined) {
+                        this.appState.addImageToTier(tierIndex, item);
+                    }
+                    this.renderer.render();
+                    this.appState.draggedItemId = null;
+                    return;
+                }
+                
+                // ファイルのドロップ
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    this.imageManager.handleFiles(files, tierIndex);
+                    return;
+                }
+
+                // ウェブ画像のドロップ
+                this.imageManager.handleWebImageDrop(e, tierIndex);
+            }
+        }
+
+        // レンダリング管理クラス
+        class Renderer {
+            constructor(appState) {
+                this.appState = appState;
+                this.container = document.getElementById('tierContainer');
+            }
+
+            render() {
+                this.container.innerHTML = '';
+
+                this.appState.tierData.forEach((tier, index) => {
+                    const tierRow = this.createTierRow(tier, index);
+                    this.container.appendChild(tierRow);
+                });
+            }
+
+            createTierRow(tier, index) {
+                const tierRow = document.createElement('div');
+                tierRow.className = 'tier-row';
+                tierRow.dataset.tierId = `tier-${index}`;
+
+                const tierItems = tier.items.map(item => this.createTierItem(item, index)).join('');
+
+                tierRow.innerHTML = `
+                    <div class="tier-label" style="background: linear-gradient(45deg, ${tier.color}, ${this.adjustBrightness(tier.color, -20)})">
+                        ${tier.name}
+                    </div>
+                    <div class="tier-items" 
+                         data-tier="${index}" 
+                         ondrop="dragDropManager.drop(event)" 
+                         ondragover="dragDropManager.allowDrop(event)" 
+                         ondragleave="dragDropManager.dragLeave(event)">
+                        ${tierItems}
+                    </div>
+                `;
+
+                return tierRow;
+            }
+
+            createTierItem(item, tierIndex) {
+                return `
+                    <div class="tier-item ${item.isWebImage ? 'web-image' : ''}" 
+                         draggable="true" 
+                         ondragstart="dragDropManager.dragStart(event)" 
+                         ondragend="dragDropManager.dragEnd(event)" 
+                         data-item-id="${item.id}">
+                        <img src="${item.src}" 
+                             alt="${item.name}" 
+                             title="${item.name}" 
+                             onerror="this.parentElement.classList.add('loading'); this.src='${this.getPlaceholderImage()}'; this.alt='読み込みエラー';"
+                             onload="this.parentElement.classList.remove('loading');">
+                        <button class="delete-btn" onclick="imageManager.deleteItem('${item.id}', ${tierIndex})">&times;</button>
+                    </div>
+                `;
+            }
+
+            adjustBrightness(color, amount) {
+                const hex = color.replace('#', '');
+                const r = Math.max(0, Math.min(255, parseInt(hex.substr(0, 2), 16) + amount));
+                const g = Math.max(0, Math.min(255, parseInt(hex.substr(2, 2), 16) + amount));
+                const b = Math.max(0, Math.min(255, parseInt(hex.substr(4, 2), 16) + amount));
+                return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+            }
+
+            getPlaceholderImage() {
+                return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjZjFmMmY2Ii8+CjxwYXRoIGQ9Ik00MCA0NUw0NSA0MEw1NSA1MEw2MCA0NUw3MCA1NUg1MEg0MEgzMEgyMEwyNSAzNUwzMCA0MEw0MCA0NVoiIGZpbGw9IiNkZGQiLz4KPC9zdmc+';
+            }
+        }
+
+        // データ管理クラス
+        class DataManager {
+            constructor(appState, renderer) {
+                this.appState = appState;
+                this.renderer = renderer;
+                this.setupPasteHandler();
+            }
+
+            copyToClipboard() {
+                try {
+                    const shareData = {
+                        tierData: this.appState.tierData,
+                        imageCounter: this.appState.imageCounter,
+                        version: '3.0',
+                        timestamp: new Date().toISOString(),
+                        type: 'TIER_MAKER_DATA'
+                    };
+                    
+                    const jsonString = JSON.stringify(shareData, null, 2);
+                    
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(jsonString).then(() => {
+                            notificationManager.show('データがクリップボードにコピーされました！');
+                        }).catch(() => {
+                            this.fallbackCopy(jsonString);
+                        });
+                    } else {
+                        this.fallbackCopy(jsonString);
+                    }
+                } catch (error) {
+                    console.error('データコピーエラー:', error);
+                    alert('データのコピーに失敗しました。');
+                }
+            }
+
+            fallbackCopy(text) {
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                textArea.style.position = 'fixed';
+                textArea.style.opacity = '0';
+                document.body.appendChild(textArea);
+                textArea.select();
+                
+                try {
+                    document.execCommand('copy');
+                    notificationManager.show('データがクリップボードにコピーされました！');
+                } catch (error) {
+                    alert('コピーに失敗しました。データが大きすぎる可能性があります。');
+                }
+                
+                document.body.removeChild(textArea);
+            }
+
+            setupPasteHandler() {
+                document.addEventListener('paste', (e) => {
+                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                        return;
+                    }
+                    
+                    e.preventDefault();
+                    const clipboardData = e.clipboardData || window.clipboardData;
+                    const pastedData = clipboardData.getData('text');
+                    
+                    if (pastedData) {
+                        this.loadFromJSON(pastedData);
+                    }
+                });
+            }
+
+            loadFromJSON(jsonString) {
+                try {
+                    const data = JSON.parse(jsonString);
+                    
+                    if (data.type === 'TIER_MAKER_DATA' && data.tierData && Array.isArray(data.tierData)) {
+                        if (confirm('クリップボードからTier表データが見つかりました。現在のデータを置き換えますか？')) {
+                            this.appState.tierData = data.tierData;
+                            this.appState.imageCounter = data.imageCounter || 0;
+                            this.renderer.render();
+                            notificationManager.show('データが復元されました！');
+                        }
+                    }
+                } catch (error) {
+                    console.log('JSONパースに失敗しました（通常のテキストの可能性）');
+                }
+            }
+        }
+
+        // 出力管理クラス
+        class ExportManager {
+            exportAsPNG() {
+                const tierContainer = document.getElementById('tierContainer');
+                
+                if (!window.html2canvas) {
+                    const script = document.createElement('script');
+                    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+                    script.onload = () => this.captureAndDownload(tierContainer);
+                    document.head.appendChild(script);
+                } else {
+                    this.captureAndDownload(tierContainer);
+                }
+            }
+
+            captureAndDownload(element) {
+                html2canvas(element, {
+                    backgroundColor: '#1a1a2e',
+                    scale: 2,
+                    useCORS: true,
+                    allowTaint: true
+                }).then(canvas => {
+                    const link = document.createElement('a');
+                    link.download = 'tier-list.png';
+                    link.href = canvas.toDataURL();
+                    link.click();
+                }).catch(error => {
+                    console.error('画像の生成に失敗しました:', error);
+                    alert('画像の保存に失敗しました。再度お試しください。');
+                });
+            }
+        }
+
+        // 通知管理クラス
+        class NotificationManager {
+            constructor() {
+                this.notification = document.getElementById('notification');
+            }
+
+            show(message) {
+                this.notification.textContent = message;
+                this.notification.classList.add('show');
+                
+                setTimeout(() => {
+                    this.notification.classList.remove('show');
+                }, 3000);
+            }
+        }
+
+        // アプリケーション初期化
+        const appState = new AppState();
+        const renderer = new Renderer(appState);
+        const tierManager = new TierManager(appState, renderer);
+        const imageManager = new ImageManager(appState, renderer);
+        const dragDropManager = new DragDropManager(appState, renderer, imageManager);
+        const dataManager = new DataManager(appState, renderer);
+        const exportManager = new ExportManager();
+        const notificationManager = new NotificationManager();
+
+        // 初期化実行
+        tierManager.initializeDefaultTiers();
+        renderer.render();
+    </script>
+</body>
+</html>
